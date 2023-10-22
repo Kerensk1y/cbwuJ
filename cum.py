@@ -22,6 +22,14 @@ konk_counts = cursor.fetchall()
 # Создание словаря для хранения количества НИР по каждому "Код конк."
 konk_count_dict = dict(konk_counts)
 
+# Обновление данных в таблице gr_konk
+for row, row_data in enumerate(data2):
+    code_konk = row_data[1]  # Получаем "Код конк." из второй таблицы
+    if code_konk in konk_count_dict:
+        count_nir = konk_count_dict[code_konk]  # Получаем количество НИР для этого кода конкурса
+        data2[row] = (row_data[0], row_data[1], row_data[2], row_data[3], row_data[4], row_data[5], row_data[6],
+                     row_data[7], count_nir)  # Обновляем данные во второй таблице
+
 # Создание окна
 app = QApplication(sys.argv)
 window = QMainWindow()
@@ -53,12 +61,6 @@ for row, row_data in enumerate(data2):
     for col, value in enumerate(row_data):
         item = QTableWidgetItem(str(value))
         table2.setItem(row, col, item)
-    # Устанавливаем количество НИР в соответствующем столбце "Кол-во НИР"
-    code_konk = row_data[1]  # Получаем "Код конк." из второй таблицы
-    if code_konk in konk_count_dict:
-        count_nir = konk_count_dict[code_konk]  # Получаем количество НИР для этого кода конкурса
-        item = QTableWidgetItem(str(count_nir))
-        table2.setItem(row, 8, item)
 
 # Создание виджета, содержащего таблицы
 table_container = QWidget()

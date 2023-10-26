@@ -1,89 +1,89 @@
+from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
+from PyQt6 import uic
+from PyQt6.uic import loadUi
+from PyQt6.QtSql import *
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QPushButton, QVBoxLayout, QWidget
-import sqlite3
+from PyQt6.uic.properties import QtWidgets
+from EditForm import Ui_EditWindow
 
-# Подключение к базе данных
 db_name = 'databases/MyDb.db'
-conn = sqlite3.connect(db_name)
-cursor = conn.cursor()
 
-# Запрос для получения данных из таблицы Gr_prog
-cursor.execute("SELECT * FROM Gr_prog")
-data1 = cursor.fetchall()
 
-# Запрос для получения данных из таблицы gr_konk
-cursor.execute("SELECT * FROM gr_konk")
-data2 = cursor.fetchall()
+class MainUI(QMainWindow):
 
-# Запрос для подсчета количества НИР для каждого уникального значения "Код конк." в таблице Gr_prog
-cursor.execute("SELECT 'Код конк.', COUNT(*) FROM Gr_prog GROUP BY 'Код конк.'")
-konk_counts = cursor.fetchall()
+    def __init__(self):
+        super(MainUI, self).__init__()
+        loadUi("MainForm.ui", self)
 
-# Создание словаря для хранения количества НИР по каждому "Код конк."
-konk_count_dict = dict(konk_counts)
+        self.setWindowTitle("Сопровождение конкурсов на соискание грантов")
 
-# Обновление данных в таблице gr_konk
-for row, row_data in enumerate(data2):
-    code_konk = row_data[1]  # Получаем "Код конк." из второй таблицы
-    if code_konk in konk_count_dict:
-        count_nir = konk_count_dict[code_konk]  # Получаем количество НИР для этого кода конкурса
-        data2[row] = (row_data[0], row_data[1], row_data[2], row_data[3], row_data[4], row_data[5], row_data[6],
-                     row_data[7], count_nir)  # Обновляем данные во второй таблице
+        self.Gr_prog()
+        self.Table_Gr_prog.triggered.connect(self.Gr_prog)
+        self.Table_gr_konk.triggered.connect(self.gr_konk)
+        self.Table_VUZ.triggered.connect(self.VUZ)
+        self.action_exit.triggered.connect(self.exit)
+        self.Edit.clicked.connect(self.open_window_edit)
 
-# Создание окна
-app = QApplication(sys.argv)
-window = QMainWindow()
-window.setGeometry(100, 100, 800, 600)
+    def open_window_edit(self):
+        self.wEdit = EditUI(parent=self)
+        self.wEdit.show()
+        print("ok")
 
-# Создание виджета для отображения таблицы 1
-table1 = QTableWidget()
-table1.setColumnCount(15)
-table1.setHorizontalHeaderLabels(["Код конк.", "Код НИР", "Руководитель", "Сокр-е наим-е ВУЗа",
-                                "План. объём финанс-я", "Факт. объем финанс-я", "1 кв-л", "2 кв-л", "3 кв-л", "4 кв-л",
-                                "Код по ГРНТИ", "Должность", "Звание", "Ученая степень", "Код вуза", "Наименование НИР"])
-table1.setRowCount(len(data1))
 
-# Заполнение таблицы 1 данными
-for row, row_data in enumerate(data1):
-    for col, value in enumerate(row_data):
-        item = QTableWidgetItem(str(value))
-        table1.setItem(row, col, item)
 
-# Создание виджета для отображения таблицы 2
-table2 = QTableWidget()
-table2.setColumnCount(9)
-table2.setHorizontalHeaderLabels(["Название конкурса", "Код конк.", "План. объем финанс-я", "Факт. объем финанс-я",
-                                "1 кв-л", "2 кв-л", "3 кв-л", "4 кв-л", "Кол-во НИР"])
-table2.setRowCount(len(data2))
+    def Gr_prog(self):
+        Gr_prog = QSqlTableModel()
+        Gr_prog.setTable('Gr_prog')
+        Gr_prog.select()
+        self.tableView.setSortingEnabled(True)
+        self.tableView.setModel(Gr_prog)
 
-# Заполнение таблицы 2 данными и количеством НИР
-for row, row_data in enumerate(data2):
-    for col, value in enumerate(row_data):
-        item = QTableWidgetItem(str(value))
-        table2.setItem(row, col, item)
+    def gr_konk(self):
+        gr_konk = QSqlTableModel()
+        gr_konk.setTable('gr_konk')
+        gr_konk.select()
+        self.tableView.setSortingEnabled(True)
+        self.tableView.setModel(gr_konk)
 
-# Создание виджета, содержащего таблицы
-table_container = QWidget()
-layout = QVBoxLayout()
-table_container.setLayout(layout)
+    def VUZ(self):
+        VUZ = QSqlTableModel()
+        VUZ.setTable('VUZ')
+        VUZ.select()
+        self.tableView.setSortingEnabled(True)
+        self.tableView.setModel(VUZ)
 
-# Добавление таблиц в виджет
-layout.addWidget(table1)
-layout.addWidget(table2)
-table2.hide()  # Скрываем вторую таблицу при старте приложения
+    def exit(self):
+        sys.exit(-1)
 
-# Добавление кнопки для переключения между таблицами
-toggle_button = QPushButton("Показать/скрыть таблицу 2")
-toggle_button.clicked.connect(lambda: table2.setVisible(not table2.isVisible()))
-layout.addWidget(toggle_button)
+    def test_click(self):
+        print("test ok")
 
-# Отображение окна и виджета с таблицами
-window.setCentralWidget(table_container)
-window.show()
+    def connect_db(db_name):
+        db = QSqlDatabase.addDatabase("QSQLITE")
+        db.setDatabaseName(db_name)
+        if not db.open():
+            print("Невозможно установить соединение {}!".format(db_name))
+            return False
+        return db
 
-# Закрытие базы данных при закрытии приложения
-def close_database():
-    conn.close()
+    if not connect_db(db_name):
+        sys.exit(-1)
+    else:
+        print("connection ok")
 
-app.aboutToQuit.connect(close_database)
-sys.exit(app.exec())
+
+class EditUI(QMainWindow):
+    def __init__(self, parent):
+        super(EditUI, self).__init__()
+        self.ui = Ui_EditWindow()
+        self.ui.setupUi(self)
+        self.parent = parent
+        #self.setAttribute(Qt.WidgetAttribute.)
+        self.setWindowTitle("Редактирование НИР")
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ui = MainUI()
+    ui.show()
+    app.exec()
